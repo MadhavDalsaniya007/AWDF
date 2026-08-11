@@ -1,7 +1,12 @@
 const express = require('express');
-const app = express();
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const Task = require('./models/Task');
 
-const PORT = 3000;
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -11,73 +16,132 @@ app.use((req, res, next) => {
     next();
 });
 
-// Dummy Database
-let students = [
-    { id: 1, name: "Rahul", age: 20 },
-    { id: 2, name: "Amit", age: 22 }
-];
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB connected'))
+    .catch((err) => console.error('MongoDB connection error:', err));
 
-// GET All
-app.get('/students', (req, res) => {
-    res.json(students);
+// GET all tasks
+app.get('/tasks', async (req, res, next) => {
+    try {
+        const tasks = await Task.find().sort({ createdAt: -1 });
+        res.json(tasks);
+    } catch (err) {
+        next(err);
+    }
 });
 
-// GET By ID
-app.get('/students/:id', (req, res) => {
-    const student = students.find(s => s.id == req.params.id);
+// GET task by id
+app.get('/tasks/:id', async (req, res, next) => {
+    try {
+        const task = await Task.findById(req.params.id);
 
-    if (!student)
-        return res.status(404).json({ message: "Student not found" });
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
 
-    res.json(student);
+        res.json(task);
+    } catch (err) {
+        next(err);
+    }
 });
 
-// POST
-app.post('/students', (req, res) => {
+// POST create task
+app.post('/tasks', async (req, res, next) => {
+    try {
+        const task = await Task.create({
+            title: req.body.title,
+            description: req.body.description,
+            completed: req.body.completed,
+            priority: req.body.priority
+        });
 
-    const student = {
-        id: students.length + 1,
-        name: req.body.name,
-        age: req.body.age
-    };
+        res.status(201).json({
+            message: 'Task created',
+            task
+        });
+    } catch (err) {
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({
+                message: 'Validation failed',
+                errors: Object.values(err.errors).map(error => ({
+                    field: error.path,
+                    message: error.message
+                }))
+            });
+        }
 
-    students.push(student);
-
-    res.status(201).json({
-        message: "Student Added",
-        student
-    });
+        next(err);
+    }
 });
 
-// PUT
-app.put('/students/:id', (req, res) => {
+// PUT update task
+app.put('/tasks/:id', async (req, res, next) => {
+    try {
+        const task = await Task.findByIdAndUpdate(
+            req.params.id,
+            {
+                title: req.body.title,
+                description: req.body.description,
+                completed: req.body.completed,
+                priority: req.body.priority
+            },
+            { new: true, runValidators: true }
+        );
 
-    const student = students.find(s => s.id == req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
 
-    if (!student)
-        return res.status(404).json({ message: "Student not found" });
+        res.json({
+            message: 'Task updated',
+            task
+        });
+    } catch (err) {
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({
+                message: 'Validation failed',
+                errors: Object.values(err.errors).map(error => ({
+                    field: error.path,
+                    message: error.message
+                }))
+            });
+        }
 
-    student.name = req.body.name;
-    student.age = req.body.age;
-
-    res.json({
-        message: "Student Updated",
-        student
-    });
+        next(err);
+    }
 });
 
-// DELETE
-app.delete('/students/:id', (req, res) => {
+// DELETE task by id
+app.delete('/tasks/:id', async (req, res, next) => {
+    try {
+        const task = await Task.findByIdAndDelete(req.params.id);
 
-    const index = students.findIndex(s => s.id == req.params.id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
 
-    if (index === -1)
-        return res.status(404).json({ message: "Student not found" });
+        res.json({
+            message: 'Task deleted'
+        });
+    } catch (err) {
+        next(err);
+    }
+});
 
-    students.splice(index, 1);
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error(err);
 
-    res.json({
-        message: "Student Deleted"
+    if (err.name === 'CastError') {
+        return res.status(400).json({
+            message: 'Invalid task ID format',
+            error: err.message
+        });
+    }
+
+    res.status(500).json({
+        message: 'Internal Server Error',
+        error: err.message
     });
 });
 
