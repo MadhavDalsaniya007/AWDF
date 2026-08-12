@@ -249,3 +249,20 @@ Methods used:
 ## 📜 License
 
 This project is developed for educational purposes.
+
+Node.js REST API with Express & MongooseA lightweight CRUD REST API built with Node.js, Express, and Mongoose for managing tasks.  🚀 FeaturesCRUD Operations: Full create, read, update, and delete functionality for tasks.  MongoDB Integration: Object Data Modeling using Mongoose.  Environment Configuration: Managed via dotenv.  📁 Folder StructurePlaintextREST_API/
+├── models/
+│   └── Task.js       # Mongoose Task schema and model
+├── .env              # Environment variables (local)
+├── .env.example      # Sample environment configuration
+├── .gitignore        # Git ignore rules
+├── index.js          # Main entry point & API routes
+├── package.json      # Project dependencies and scripts
+└── package-lock.json # Dependency lockfile
+⚙️ Environment VariablesCreate a .env file in the root directory by referencing .env.example:  Code snippetPORT=3000
+MONGO_URI=mongodb://localhost:3000/taskmanager
+  🛠️ Installation & SetupClone the repository:Bashgit clone <repository-url>
+cd REST_API
+Install dependencies:Bashnpm install
+Start the application:Bashnpm start
+📡 API EndpointsMethodEndpointDescriptionGET/tasksRetrieve all tasksPOST/tasksCreate a new taskGET/tasks/:idGet a specific task by IDPUT/tasks/:idUpdate a task by IDDELETE/tasks/:idDelete a task by ID
